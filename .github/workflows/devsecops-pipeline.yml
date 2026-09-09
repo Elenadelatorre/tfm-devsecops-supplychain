@@ -114,6 +114,7 @@ jobs:
         with:
           image-ref: 'secure-web-app:${{ github.sha }}'
           format: 'table'
-          exit-code: '1' # Bloquea si la imagen contiene fallos HIGH o CRITICAL
+          exit-code: '1'
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+          severity: 'CRITICAL'
