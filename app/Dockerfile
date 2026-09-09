@@ -4,7 +4,7 @@ FROM node:20-alpine3.19 AS builder
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Etapa 2: Imagen final mínima para producción
 FROM node:20-alpine3.19
