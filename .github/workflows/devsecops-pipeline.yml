@@ -17,14 +17,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necesario para escanear todo el historial de Git
+          fetch-depth: 0
 
-      - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          # Dejamos que TruffleHog maneje base y head de forma automática e inteligente
-          extra_args: --only-verified --fail
+      - name: Install & Run TruffleHog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+          trufflehog filesystem . --only-verified --fail
 
   # =============================================================
   # ETAPA 2: ANÁLISIS ESTÁTICO DE CÓDIGO (SAST - SonarCloud)
