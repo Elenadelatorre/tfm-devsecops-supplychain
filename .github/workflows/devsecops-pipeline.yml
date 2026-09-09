@@ -1,0 +1,123 @@
+name: DevSecOps Secure Pipeline & Software Supply Chain
+
+on:
+  push:
+    branches: ['main', 'develop']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  # =============================================================
+  # ETAPA 1: ESCANEO DE SECRETOS (TruffleHog)
+  # =============================================================
+  secrets-scan:
+    name: 1. Secret Scanning (TruffleHog)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necesario para escanear todo el historial de Git
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified --fail
+
+  # =============================================================
+  # ETAPA 2: ANÁLISIS ESTÁTICO DE CÓDIGO (SAST - SonarCloud)
+  # =============================================================
+  sast-analysis:
+    name: 2. SAST (SonarCloud)
+    needs: [secrets-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run SonarCloud Scanner
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+
+  # =============================================================
+  # ETAPA 3: SEGURIDAD EN INFRAESTRUCTURA COMO CÓDIGO (Checkov)
+  # =============================================================
+  iac-security:
+    name: 3. IaC Security (Checkov)
+    needs: [secrets-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov against Terraform
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: cli
+          soft_fail: false # Bloquea el pipeline si hay violaciones de seguridad
+          compact: true
+
+  # =============================================================
+  # ETAPA 4: SCA, GENERACIÓN DE SBOM Y SEGURIDAD DE CONTENEDOR (Trivy)
+  # =============================================================
+  container-and-sbom:
+    name: 4. Supply Chain, SBOM & Container Security (Trivy)
+    needs: [sast-analysis, iac-security]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 4.1 Análisis de dependencias (SCA en app)
+      - name: Scan Application Dependencies (SCA)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './app'
+          format: 'table'
+          exit-code: '1' # Bloquea si hay vulnerabilidades HIGH o CRITICAL
+          severity: 'CRITICAL,HIGH'
+
+      # 4.2 Generación del Software Bill of Materials (SBOM) en CycloneDX
+      - name: Generate SBOM (CycloneDX format)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './app'
+          format: 'cyclonedx'
+          output: 'sbom-cyclonedx.json'
+
+      # 4.3 Publicación del SBOM como artefacto de la build
+      - name: Upload SBOM as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: software-bill-of-materials
+          path: sbom-cyclonedx.json
+          retention-days: 14
+
+      # 4.4 Construcción de la imagen Docker local
+      - name: Build Docker Image
+        run: |
+          docker build -t secure-web-app:${{ github.sha }} ./app
+
+      # 4.5 Escaneo de vulnerabilidades en la imagen construida
+      - name: Scan Docker Image for Vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'secure-web-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # Bloquea si la imagen contiene fallos HIGH o CRITICAL
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
