@@ -23,8 +23,7 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
+          # Dejamos que TruffleHog maneje base y head de forma automática e inteligente
           extra_args: --only-verified --fail
 
   # =============================================================
@@ -47,6 +46,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
+            -Dsonar.organization=elenadelatorre
+            -Dsonar.projectKey=Elenadelatorre_tfm-devsecops-supplychain
             -Dsonar.qualitygate.wait=true
 
   # =============================================================
