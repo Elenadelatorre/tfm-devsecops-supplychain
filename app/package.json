@@ -1,0 +1,14 @@
+{
+  "name": "secure-web-app",
+  "version": "1.0.0",
+  "description": "App web para laboratorio DevSecOps TFM",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"No tests specified yet\" && exit 0"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "helmet": "^7.1.0"
+  }
+}
