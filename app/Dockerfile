@@ -11,12 +11,19 @@ FROM node:22-alpine3.21
 
 WORKDIR /usr/src/app
 
-# Copia de artefactos mínimos
+# Eliminar gestores de paquetes no necesarios en runtime (reduce superficie de ataque)
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx \
+           /opt/yarn* \
+           /usr/local/bin/yarn* \
+           /usr/local/lib/node_modules/corepack
+
+# Copia de dependencias limpias y código fuente
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY package*.json ./
 COPY src/ ./src/
 
-# Usuario sin privilegios
 USER node
 
 EXPOSE 3000
