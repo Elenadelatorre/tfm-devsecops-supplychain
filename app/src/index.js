@@ -19,3 +19,6 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en el puerto ${PORT}`);
 });
+
+// PRUEBA DE FUGA DE CREDENCIALES
+const AWS_SECRET_KEY = 'AKIAIMNOXYZKEYEXAMPLE1234567890123456';
