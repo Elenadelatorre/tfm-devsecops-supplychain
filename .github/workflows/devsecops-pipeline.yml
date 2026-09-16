@@ -115,8 +115,5 @@ jobs:
           image-ref: 'secure-web-app:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
+          ignore-unfixed: true
           severity: 'CRITICAL'
-          vuln-type: 'os,library'
-          trivyignores: ''
-        env:
-          TRIVY_IGNORE_UNFIXED: 'true'
